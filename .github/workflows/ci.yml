@@ -21,9 +21,10 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv pip install --system ruff
-      - run: ruff check src tests scripts
-      - run: ruff format --check src tests scripts
+      - run: uv venv
+      - run: uv pip install ruff
+      - run: uv run ruff check src tests scripts
+      - run: uv run ruff format --check src tests scripts
 
   type:
     runs-on: ubuntu-latest
@@ -32,8 +33,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv pip install --system -e ".[dev]"
-      - run: mypy
+      - run: uv venv
+      - run: uv pip install -e ".[dev]"
+      - run: uv run mypy
 
   test:
     strategy:
@@ -47,8 +49,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv pip install --system -e ".[dev]"
-      - run: pytest -q -m "not live and not optional"
+      - run: uv venv --python ${{ matrix.python-version }}
+      - run: uv pip install -e ".[dev]"
+      - run: uv run pytest -q -m "not live and not optional"
 
   doc-gates:
     runs-on: ubuntu-latest
