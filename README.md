@@ -37,6 +37,9 @@ pip install "tracemin[stochastic]"   # + statistical certification (numpy/scipy)
 pip install "tracemin[all]"          # + seedloop / context-sieve integrations
 ```
 
+> Core and `[stochastic]` support Python >= 3.10. The `[sieve]` and `[all]`
+> extras pull `context-sieve` (a git dependency) which requires Python >= 3.11.
+
 ## Quickstart (bring your own `replay_fn`)
 
 ```python
