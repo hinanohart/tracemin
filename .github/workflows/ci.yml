@@ -21,10 +21,13 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv venv
-      - run: uv pip install ruff
-      - run: uv run ruff check src tests scripts
-      - run: uv run ruff format --check src tests scripts
+      - name: lint
+        run: |
+          uv venv
+          uv pip install ruff
+          source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate
+          ruff check src tests scripts
+          ruff format --check src tests scripts
 
   type:
     runs-on: ubuntu-latest
@@ -33,9 +36,12 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv venv
-      - run: uv pip install -e ".[dev]"
-      - run: uv run mypy
+      - name: mypy
+        run: |
+          uv venv
+          uv pip install -e ".[dev]"
+          source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate
+          mypy
 
   test:
     strategy:
@@ -49,9 +55,12 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv venv --python ${{ matrix.python-version }}
-      - run: uv pip install -e ".[dev]"
-      - run: uv run pytest -q -m "not live and not optional"
+      - name: test
+        run: |
+          uv venv --python ${{ matrix.python-version }}
+          uv pip install -e ".[dev]"
+          source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate
+          pytest -q -m "not live and not optional"
 
   doc-gates:
     runs-on: ubuntu-latest
