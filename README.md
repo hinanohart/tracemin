@@ -7,7 +7,8 @@ context — messages, tool definitions, retrieved files, instructions — to a
 **1-minimal** subset by *re-executing each candidate* and keeping only those that
 still reproduce the **same** failure (matched by a normalized failure signature).
 
-`tracemin` returns a **minimal reproducer**, not a root-cause explanation.
+`tracemin` returns a **minimal reproducer** — the smallest context that still
+triggers the failure — not an explanation of the underlying cause.
 
 > **Status:** pre-alpha (`0.1.0a1`). API and outputs may change.
 
@@ -23,9 +24,9 @@ still reproduce the **same** failure (matched by a normalized failure signature)
 - Targets the **same** failure as the original run via a normalized failure signature.
 
 **Does not:**
-- Explain *why* the run failed or attribute blame to a step (that is failure attribution, a different problem).
+- Attribute the failure to a step or describe the underlying mechanism (that is failure attribution, a different problem).
 - Promise a unique answer under a non-reproducible (flaky) `replay_fn`.
-- Run on every framework out of the box — see the adapter table.
+- Work with arbitrary agent frameworks without an adapter — see the adapter table.
 
 The single-shot core reports `certified: false`. Certification is available only
 through the `[stochastic]` extra and only when interval separation passes.

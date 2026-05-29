@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 import sys
 from pathlib import Path
 
@@ -151,6 +152,20 @@ def check_bench() -> bool:
     return (SRC / "bench" / "inject.py").exists() and (SRC / "bench" / "metrics.py").exists()
 
 
+# --- S7: doc honesty gates ----------------------------------------------------
+
+
+def check_doc_gate_scripts() -> bool:
+    a = ROOT / "scripts" / "check_banned_phrases.sh"
+    b = ROOT / "scripts" / "check_numeric_markers.sh"
+    return a.exists() and os.access(a, os.X_OK) and b.exists() and os.access(b, os.X_OK)
+
+
+def check_readme_filled() -> bool:
+    t = _read(ROOT / "README.md")
+    return "@S7" not in t and "@S6" not in t and "MARKER@" not in t
+
+
 STEP_CHECKS: dict[str, list[tuple[str, object]]] = {
     "S0_5": [
         ("LICENSE is Apache-2.0", check_license),
@@ -182,6 +197,10 @@ STEP_CHECKS: dict[str, list[tuple[str, object]]] = {
     ],
     "S6": [
         ("bench inject.py + metrics.py present", check_bench),
+    ],
+    "S7": [
+        ("doc-gate scripts exist + executable", check_doc_gate_scripts),
+        ("README has no @S6/@S7 placeholders left", check_readme_filled),
     ],
 }
 
