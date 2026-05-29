@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets / env (R11: never commit token values)
+.env
+.env.*
+*.token
+*_token
+hf_token*
+
+# Build-state / locks (session-local, not part of the package)
+.tracemin-progress.json
+.tracemin.lock
+
+# Fixtures that may carry injected secrets for scrub leak tests
+tests/fixtures/*.secret.jsonl
+
+# OS
+.DS_Store

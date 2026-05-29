@@ -1,0 +1,99 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tracemin"
+version = "0.1.0a1"
+description = "Re-execution-verified, dependency-aware delta-debugger for failed LLM-agent runs: shrink a failing trajectory to a 1-minimal context subset."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "hinanohart" }]
+keywords = [
+  "delta-debugging",
+  "ddmin",
+  "llm-agent",
+  "minimal-reproducer",
+  "trajectory",
+  "debugging",
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Debuggers",
+  "Topic :: Software Development :: Testing",
+]
+dependencies = ["huggingface_hub>=0.20"]
+
+[project.optional-dependencies]
+# Native numpy/scipy re-derivation of passwedge's pass^k / Beta-posterior /
+# two-proportion separation. PyPI-clean (no git dep); prefers passwedge if importable.
+stochastic = ["numpy>=1.21", "scipy>=1.7"]
+# Optional upgrade of the secret scrubber to context-sieve's blocklist+entropy engine.
+# The builtin stdlib-re scrubber is default-ON regardless, so core is never leaky.
+sieve = ["context-sieve @ git+https://github.com/hinanohart/context-sieve.git"]
+# Optional deterministic async-race byte-replay via seedloop.
+seedloop = ["seedloop @ git+https://github.com/hinanohart/seedloop.git"]
+# OpenHands trajectory ingestion uses only the standard library.
+openhands = []
+all = [
+  "numpy>=1.21",
+  "scipy>=1.7",
+  "context-sieve @ git+https://github.com/hinanohart/context-sieve.git",
+  "seedloop @ git+https://github.com/hinanohart/seedloop.git",
+]
+dev = [
+  "pytest>=7",
+  "pytest-cov",
+  "ruff",
+  "mypy",
+  "hypothesis>=6",
+  "numpy>=1.21",
+  "scipy>=1.7",
+]
+
+[project.scripts]
+tracemin = "tracemin.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/hinanohart/tracemin"
+Repository = "https://github.com/hinanohart/tracemin"
+
+[tool.hatch.metadata]
+# Required because the [sieve]/[seedloop]/[all] extras reference public sibling
+# repos by git URL (they are not on PyPI). The CI/clean-clone path installs only
+# core + [stochastic] (PyPI-clean), so this does not affect the tested install.
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tracemin"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_ignores = true
+files = ["src/tracemin"]
+
+[[tool.mypy.overrides]]
+module = ["huggingface_hub.*", "scipy.*", "passwedge.*", "context_sieve.*", "seedloop.*", "regex.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "live: requires live HF inference (opt-in; needs network + HF_TOKEN)",
+  "optional: requires an optional extra (seedloop / sieve)",
+]
+addopts = "-q"
