@@ -54,7 +54,9 @@ def run_doctor() -> DoctorReport:
     if not hf_hub:
         rows.append(DoctorRow("adapter:hf", "MISSING", "huggingface_hub not importable"))
     elif token:
-        rows.append(DoctorRow("adapter:hf", "LIVE", "huggingface_hub + HF_TOKEN present"))
+        rows.append(
+            DoctorRow("adapter:hf", "LIVE", "HF_TOKEN present (format not connection-verified)")
+        )
     else:
         rows.append(DoctorRow("adapter:hf", "MOCK", "HF_TOKEN absent — live replay unavailable"))
     rows.append(DoctorRow("adapter:openhands", "LIVE", "stdlib ingest (replay via hf)"))

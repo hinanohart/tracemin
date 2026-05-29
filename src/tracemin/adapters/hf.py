@@ -21,6 +21,7 @@ from typing import Any
 from tracemin.adapters._render import render_chat
 from tracemin.atoms import Atom
 from tracemin.replay import RawOutput, ReplayError
+from tracemin.scrub import scrub
 
 replay_capable = True
 
@@ -84,7 +85,8 @@ class HFReplay:
                 seed=self.seed,
             )
         except Exception as exc:  # network / quota / 5xx -> transport error, not a verdict
-            raise ReplayError(f"HF inference failed: {type(exc).__name__}: {exc}") from exc
+            # Defense-in-depth: scrub the message in case the client embedded a token.
+            raise ReplayError(scrub(f"HF inference failed: {type(exc).__name__}: {exc}")) from exc
         return parse_response(resp)
 
 

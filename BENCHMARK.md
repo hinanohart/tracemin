@@ -36,9 +36,12 @@ fixed-seed stochastic family.
 ## The headline honesty result
 
 The signature-gated engine drops the false-reproducer rate from `0.45`
-`[synthetic-benchmark]` to `0.0` `[synthetic-benchmark]` on the decoy family. This
-is the evidence behind the claim that matching a normalized failure signature
-targets the *same* failure rather than *a* failure.
+`[synthetic-benchmark]` to `0.0` `[synthetic-benchmark]` on the decoy family. The
+difference is statistically significant — paired exact McNemar p = `0.0039`
+`[synthetic-benchmark]`, and the Wilson 95% intervals (`false_reproducer_wilson_*`
+in the results JSON) are disjoint. This is the evidence behind the claim that
+matching a normalized failure signature targets the *same* failure rather than
+*a* failure.
 
 Numbers are reproducible for a fixed seed; metadata (date, host) is environmental
 and not part of the metric comparison.

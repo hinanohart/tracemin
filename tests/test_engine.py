@@ -271,3 +271,26 @@ def test_result_is_wf_constrained_one_minimal(trigger_index):
             continue
         out = replay([traj.by_id()[i] for i in survivors])
         assert out.exit_code == 0  # no longer reproduces -> the atom was necessary
+
+
+def test_wf_constrained_one_minimal_with_dependency_edges():
+    # The trigger requires a symbol produced by P; a chain Q->R is pure distractor.
+    producer = _msg({"defines": "s"}, produces=["s"], order=0)
+    trigger = _msg({"uses": "s"}, requires=["s"], order=1)
+    q = _msg({"defines": "t"}, produces=["t"], order=2)
+    r = _msg({"uses": "t"}, requires=["t"], order=3)
+    traj = Trajectory.of([producer, trigger, q, r])
+    replay = _replay(lambda ids: _fail() if trigger.id in ids else _pass())
+    res = minimize(traj, replay, ExitCodeOracle(), double_check=False)
+    # closure keeps the producer; the Q->R chain is fully removed.
+    assert set(res.minimal_ids) == {producer.id, trigger.id}
+    assert traj.is_well_formed(set(res.minimal_ids))
+    # 1-minimal: removing either remaining atom (with closure) breaks reproduction.
+    for atom_id in set(res.minimal_ids):
+        survivors = traj.survivors_after_removing(
+            set(traj.removable_ids) - (set(res.minimal_ids) - {atom_id})
+        )
+        if survivors is None:
+            continue
+        out = replay([traj.by_id()[i] for i in survivors])
+        assert out.exit_code == 0

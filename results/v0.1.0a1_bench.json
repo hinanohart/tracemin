@@ -18,6 +18,15 @@
     "minimality_verify_rate": 1.0,
     "false_reproducer_rate_no_sig": 0.45,
     "false_reproducer_rate_with_sig": 0.0,
+    "false_reproducer_wilson_no_sig": [
+      0.2582,
+      0.6579
+    ],
+    "false_reproducer_wilson_with_sig": [
+      0.0,
+      0.1611
+    ],
+    "false_reproducer_mcnemar_p": 0.0039,
     "passk_under_noise_c_over_k": "39/40",
     "n_deterministic_cases": 80,
     "n_decoy_cases": 20,

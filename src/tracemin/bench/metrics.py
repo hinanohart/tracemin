@@ -13,6 +13,7 @@ import argparse
 import json
 import platform
 import random
+from math import comb, sqrt
 from pathlib import Path
 from statistics import fmean
 
@@ -28,6 +29,27 @@ BENCH_SCHEMA = "tracemin-bench/1"
 
 def _recovers(minimal_ids: tuple[str, ...], ground_truth: frozenset[str]) -> bool:
     return set(ground_truth) <= set(minimal_ids)
+
+
+def _wilson(c: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score interval for a binomial proportion."""
+    if n == 0:
+        return (0.0, 1.0)
+    p = c / n
+    denom = 1.0 + z * z / n
+    center = (p + z * z / (2 * n)) / denom
+    half = (z * sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / denom
+    return (max(0.0, center - half), min(1.0, center + half))
+
+
+def _mcnemar_exact_p(b: int, c: int) -> float:
+    """Two-sided exact McNemar p-value for paired discordant counts (b, c)."""
+    n = b + c
+    if n == 0:
+        return 1.0
+    k = min(b, c)
+    tail = sum(comb(n, i) for i in range(k + 1)) * (0.5**n)
+    return min(1.0, 2.0 * tail)
 
 
 def _is_one_minimal(case: inject.Case, minimal_ids: tuple[str, ...]) -> bool:
@@ -76,8 +98,9 @@ def run_suite(
             if _is_one_minimal(case, res.minimal_ids):
                 one_minimal += 1
 
-    # decoy: false-reproducer rate with the signature vs without it
+    # decoy: false-reproducer rate with the signature vs without it (paired)
     fr_sig = fr_nosig = n_decoy = 0
+    sig_better = nosig_better = 0
     for _ in range(n_per_family):
         case = inject.decoy(rng)
         n_decoy += 1
@@ -85,10 +108,16 @@ def run_suite(
         no_sig = minimize(
             case.trajectory, case.replay_fn, oracle, signature_fn=None, double_check=False
         )
-        if not _recovers(with_sig.minimal_ids, case.ground_truth):
+        rec_with = _recovers(with_sig.minimal_ids, case.ground_truth)
+        rec_no = _recovers(no_sig.minimal_ids, case.ground_truth)
+        if not rec_with:
             fr_sig += 1
-        if not _recovers(no_sig.minimal_ids, case.ground_truth):
+        if not rec_no:
             fr_nosig += 1
+        if rec_with and not rec_no:
+            sig_better += 1
+        elif rec_no and not rec_with:
+            nosig_better += 1
 
     # controlled-stochastic pass^k on the recovered minimal set
     sc = inject.stochastic(rng, size=stoch_size, p=0.9)
@@ -109,6 +138,9 @@ def run_suite(
         "minimality_verify_rate": round(one_minimal / total, 4),
         "false_reproducer_rate_no_sig": round(fr_nosig / n_decoy, 4),
         "false_reproducer_rate_with_sig": round(fr_sig / n_decoy, 4),
+        "false_reproducer_wilson_no_sig": [round(x, 4) for x in _wilson(fr_nosig, n_decoy)],
+        "false_reproducer_wilson_with_sig": [round(x, 4) for x in _wilson(fr_sig, n_decoy)],
+        "false_reproducer_mcnemar_p": round(_mcnemar_exact_p(sig_better, nosig_better), 4),
         "passk_under_noise_c_over_k": f"{c}/{stoch_k}",
         "n_deterministic_cases": total,
         "n_decoy_cases": n_decoy,
