@@ -13,6 +13,7 @@ DOCS=("README.md")
 shopt -s nullglob
 DOCS+=(docs/*.md)
 shopt -u nullglob
+[ -f BENCHMARK.md ] && DOCS+=("BENCHMARK.md")
 
 # Each pattern is an overclaim with no honest use in our docs.
 PATTERNS='root[ -]?cause|diagnoses?|diagnostic|guarantees? (determinism|to find)|deterministic(ally)?|any framework|every framework|universal|the first|first (open|oss|tool|framework|library|package)|SOTA|state[ -]of[ -]the[ -]art|silver bullet|fixes the|repairs the'

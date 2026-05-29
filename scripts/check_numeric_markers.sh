@@ -14,6 +14,7 @@ DOCS=("README.md")
 shopt -s nullglob
 DOCS+=(docs/*.md)
 shopt -u nullglob
+[ -f BENCHMARK.md ] && DOCS+=("BENCHMARK.md")
 
 MARKER='\[(measured|synthetic-benchmark|illustrative)\]'
 METRIC='[0-9]+(\.[0-9]+)?%|[0-9]+(\.[0-9]+)?[x×]'
