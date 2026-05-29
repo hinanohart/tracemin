@@ -12,12 +12,10 @@ triggers the failure — not an explanation of the underlying cause.
 
 > **Status:** pre-alpha (`0.1.0a1`). API and outputs may change.
 
-<!-- numbers are generated from results/ at S6/S7; no hand-written metrics here -->
-
 ## What it does (and does not) claim
 
 **Does:**
-- Returns a context subset whose failure is **re-verified by re-execution** (not by static heuristic).
+- Returns a context subset whose failure is **re-verified by re-execution** (not by a static heuristic).
 - Keeps every candidate **well-formed by construction** via dependency-aware closure removal.
 - With the `[stochastic]` extra, treats a stochastic policy honestly: an atom is
   reported as necessary only when a statistical interval-separation test passes.
@@ -39,25 +37,95 @@ pip install "tracemin[stochastic]"   # + statistical certification (numpy/scipy)
 pip install "tracemin[all]"          # + seedloop / context-sieve integrations
 ```
 
-## Quickstart
+## Quickstart (bring your own `replay_fn`)
 
-<!-- QUICKSTART@S7 -->
+```python
+from tracemin import Atom, AtomKind, ExitCodeOracle, RawOutput, Trajectory, minimize
+
+# 1. Normalize the failed run into typed atoms.
+atoms = [
+    Atom.make(AtomKind.INSTRUCTION, "You are a helpful agent.", order=0),
+    Atom.make(AtomKind.MESSAGE, {"role": "user", "content": "do the task"}, order=1),
+    # ... the rest of the messages / tool defs / retrieved files ...
+]
+traj = Trajectory.of(atoms)
+
+# 2. Re-execute a candidate subset and return its raw output.
+def replay_fn(subset):
+    result = run_your_agent(subset)          # your code
+    return RawOutput(exit_code=result.code, text=result.text)
+
+# 3. Shrink to a 1-minimal reproducer of the SAME failure.
+result = minimize(traj, replay_fn, ExitCodeOracle())
+print(result.minimal_ids)                    # the minimal context
+print(result.certified)                      # False (single-shot core)
+```
+
+No replay function to write? The `hf` adapter re-prompts a HuggingFace endpoint at
+temperature 0 as the replay engine:
+
+```python
+from tracemin import RegexOracle, minimize
+from tracemin.adapters.hf import HFReplay   # set HF_TOKEN in the environment
+
+result = minimize(traj, HFReplay("meta-llama/Llama-3.1-8B-Instruct"), RegexOracle("KeyError"))
+```
+
+## CLI
+
+```bash
+tracemin doctor                              # report LIVE / MOCK / MISSING per component
+tracemin reduce run.json --adapter openhands --model <hf-id> --oracle exception:KeyError
+tracemin replay repro.json                   # validate + summarize a saved artifact
+tracemin diff a.json b.json                  # compare two artifacts' minimal atoms
+```
+
+Oracle specs: `exit-nonzero`, `regex:PAT`, `not-regex:PAT`, `exception:TYPE`, `answer:TEXT`.
 
 ## Adapters
 
-<!-- ADAPTER-TABLE@S7 -->
+| Adapter | Role | Replay |
+|---|---|---|
+| `hf` | stateless re-prompt at temperature 0 | replay-capable (the default engine) |
+| `openhands` | ingest V0 `trajectory.json` / V1 `events/` | replay via the `hf` engine |
+| `claude` | ingest Claude Code JSONL transcripts | reduction-only (attach an engine to verify) |
 
 ## How it works
 
-<!-- ENGINE-NOTES@S7 -->
+1. The run is normalized into content-addressed **atoms** with `produces`/`requires`
+   edges that induce a dependency DAG.
+2. A dependency-aware **ddmin** searches for a 1-minimal failing subset. When it
+   proposes removing a set, **closure removal** also drops anything left dangling, so
+   every tested candidate satisfies the well-formedness invariant — hence the reported
+   minimality is **wf-constrained** 1-minimal.
+3. A candidate is accepted only when the oracle returns `FAIL` **and** its normalized
+   failure signature equals the original's. Transport/infrastructure errors map to a
+   third verdict (`ERROR`) that is excluded from both accept and reject.
+4. The single-shot core never certifies. The `[stochastic]` extra re-runs each
+   leave-one-out *k* times and certifies an atom only on interval separation.
 
 ## Benchmarks
 
-<!-- BENCH@S7: all figures sourced from results/ and tagged [synthetic-benchmark] -->
+All figures are `[synthetic-benchmark]` results from a failure-injection suite whose
+ground truth is known by construction. Highlights (seed 0): recovery recall `1.0`
+`[synthetic-benchmark]`, wf-constrained 1-minimality verified at `1.0`
+`[synthetic-benchmark]`, and the false-reproducer rate dropping from `0.45`
+`[synthetic-benchmark]` without the failure signature to `0.0` `[synthetic-benchmark]`
+with it. See [BENCHMARK.md](BENCHMARK.md) and
+[`results/v0.1.0a1_bench.json`](results/v0.1.0a1_bench.json).
+
+> This is a synthetic benchmark demonstrating that the algorithm recovers a known
+> injected ground truth; it is not a prediction of real-world performance.
 
 ## Related work
 
-<!-- RELATED-WORK@S7 -->
+Delta debugging is Zeller & Hildebrandt's ddmin (TSE 2002). Recent work applies it to
+prompts (Amazon, "Delta Debugging for LLM-Integrated Systems", ICSE 2026 SEIP — no
+released tool) and compresses *code* context to *succeed* (OCD/SWEZZE, arXiv 2603.28119
+— the opposite objective). Failure *attribution* (AgenTracer, Who&When) answers a
+different question. `tracemin` whole-trajectory atoms, re-execution verification and a
+distributed OSS package occupy a niche we are not aware of being filled by an existing
+tool.
 
 ## License
 
