@@ -109,7 +109,7 @@ def cmd_reduce(args: argparse.Namespace) -> int:
     oracle = build_oracle(args.oracle)
     replay = HFReplay(args.model)
     budget = ReplayBudget(max_calls=args.budget_calls, max_usd=args.budget_usd)
-    result = minimize(trajectory, replay, oracle, budget=budget)
+    result = minimize(trajectory, replay, oracle, budget=budget, cost_per_call=args.cost_per_call)
 
     confidence_method = "illustrative"
     if args.k > 1:
@@ -156,7 +156,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="trials per candidate; k>1 enables [stochastic] certification",
     )
     r.add_argument("--budget-calls", type=int, default=None)
-    r.add_argument("--budget-usd", type=float, default=None)
+    r.add_argument(
+        "--budget-usd",
+        type=float,
+        default=None,
+        help="cost ceiling; only takes effect together with --cost-per-call",
+    )
+    r.add_argument(
+        "--cost-per-call",
+        type=float,
+        default=0.0,
+        help="USD charged per replay call (used to enforce --budget-usd)",
+    )
     r.add_argument("--out", default=None, help="write the artifact JSON here")
     r.add_argument("--report", action="store_true", help="also print a bug report to stderr")
     r.set_defaults(func=cmd_reduce)

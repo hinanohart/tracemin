@@ -74,3 +74,23 @@ def test_survivors_keep_pinned_and_are_well_formed():
     assert survivors is not None
     assert keep.id in survivors and tool.id in survivors
     assert t.is_well_formed(survivors)
+
+
+def test_explicit_order_zero_is_preserved_not_reassigned():
+    # Regression: an atom explicitly placed at order 0 must not be silently
+    # reassigned to its positional index just because 0 is falsy.
+    first = _atom("first", order=5)
+    second = _atom("second", order=0)  # explicit 0, but at list position 1
+    t = Trajectory.of([first, second])
+    by_id = t.by_id()
+    assert by_id[second.id].order == 0  # kept, not reassigned to 1
+    assert by_id[first.id].order == 5
+
+
+def test_unassigned_order_is_filled_by_sequence_position():
+    # Atoms made without an explicit order (sentinel -1) get their position.
+    a = Atom.make(AtomKind.MESSAGE, "x")
+    b = Atom.make(AtomKind.MESSAGE, "y")
+    assert a.order == -1 and b.order == -1  # unset before Trajectory.of
+    t = Trajectory.of([a, b])
+    assert [at.order for at in t.atoms] == [0, 1]

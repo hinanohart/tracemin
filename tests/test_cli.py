@@ -110,3 +110,46 @@ def test_main_diff(tmp_path, capsys):
     assert main(["diff", str(a), str(b)]) == 0
     out = capsys.readouterr().out
     assert "shared" in out and "y" in out
+
+
+def test_reduce_cost_per_call_makes_usd_budget_bite(tmp_path, monkeypatch, capsys):
+    # Regression: --budget-usd was a dead knob because cmd_reduce dropped
+    # cost_per_call (every charge was $0.00, so the ceiling never fired). With
+    # --cost-per-call wired through, a per-call price makes the USD budget bite.
+    import tracemin.adapters.hf as hf
+
+    monkeypatch.setattr(hf, "has_live_token", lambda: True)
+
+    class _FakeReplay:
+        replay_capable = True
+
+        def __init__(self, model: str) -> None:
+            self.model = model
+
+        def __call__(self, subset):
+            return RawOutput(exit_code=1, exception_type="KeyError")
+
+    monkeypatch.setattr(hf, "HFReplay", _FakeReplay)
+
+    p = tmp_path / "t.json"
+    p.write_text(json.dumps([{"role": "user", "content": c} for c in "abcdef"]))
+    # max_usd 2.5 admits the two pre-flight calls ($1 each); the first ddmin
+    # probe charge ($3 total) trips the ceiling -> budget-truncated.
+    rc = main(
+        [
+            "reduce",
+            str(p),
+            "--model",
+            "m",
+            "--oracle",
+            "exit-nonzero",
+            "--budget-usd",
+            "2.5",
+            "--cost-per-call",
+            "1.0",
+        ]
+    )
+    assert rc == 0
+    art = json.loads(capsys.readouterr().out)
+    assert art["certified"] is False
+    assert art["certified_reason"] == "budget-truncated"

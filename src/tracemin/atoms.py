@@ -73,7 +73,7 @@ class Atom:
     produces: frozenset[str] = field(default_factory=frozenset)
     requires: frozenset[str] = field(default_factory=frozenset)
     pinned: bool = False
-    order: int = 0
+    order: int = -1  # -1 = position not yet assigned; Trajectory.of fills it by sequence index
 
     @staticmethod
     def make(
@@ -83,7 +83,7 @@ class Atom:
         produces: Iterable[str] = (),
         requires: Iterable[str] = (),
         pinned: bool = False,
-        order: int = 0,
+        order: int = -1,
         id: str | None = None,
     ) -> Atom:
         prod = frozenset(produces)
@@ -123,8 +123,8 @@ class Trajectory:
     def of(atoms: Sequence[Atom]) -> Trajectory:
         ordered = tuple(
             a
-            if a.order
-            else Atom.make(  # keep explicit orders, else assign by position
+            if a.order >= 0  # keep an explicitly assigned order (including 0), else use position
+            else Atom.make(
                 a.kind,
                 a.payload,
                 produces=a.produces,
