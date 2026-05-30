@@ -8,8 +8,8 @@ version = "0.1.0a1"
 description = "Re-execution-verified, dependency-aware delta-debugger for failed LLM-agent runs: shrink a failing trajectory to a 1-minimal context subset."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "Apache-2.0"
-license-files = ["LICENSE", "NOTICE"]
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "hinanohart" }]
 keywords = [
   "delta-debugging",
