@@ -42,7 +42,7 @@ def _module_has(module_rel: str, *symbols: str) -> bool:
 
 
 def check_license() -> bool:
-    return "Apache License" in _read(ROOT / "LICENSE")
+    return "MIT License" in _read(ROOT / "LICENSE")
 
 
 def check_notice() -> bool:
@@ -168,7 +168,7 @@ def check_readme_filled() -> bool:
 
 STEP_CHECKS: dict[str, list[tuple[str, object]]] = {
     "S0_5": [
-        ("LICENSE is Apache-2.0", check_license),
+        ("LICENSE is MIT", check_license),
         ("NOTICE credits passwedge/context-sieve/seedloop", check_notice),
         ("pyproject: name+core dep huggingface_hub only, 5 extras, script entry", check_pyproject),
         ("import tracemin works, __version__ 0.1.0a*", check_import),
