@@ -9,7 +9,7 @@ description = "Re-execution-verified, dependency-aware delta-debugger for failed
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "hinanohart" }]
 keywords = [
   "delta-debugging",
