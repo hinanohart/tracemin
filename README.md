@@ -12,40 +12,6 @@ triggers the failure — not an explanation of the underlying cause.
 
 > **Status:** pre-alpha (`0.1.0a1`). API and outputs may change.
 
-## Architecture
-
-```mermaid
-flowchart TD
-    Input[Failed agent run] --> Ingest[Adapter ingestion<br>openhands / claude]
-    Ingest --> Atoms[Trajectory of typed Atoms<br>message / tool_def / retrieved_file / instruction]
-    Atoms --> DAG[Dependency DAG<br>produces and requires edges]
-    DAG --> Engine[ddmin reduction engine]
-    Engine --> Closure[Closure removal<br>drop dangling atoms]
-    Closure --> Replay[replay_fn re-executes candidate]
-    Replay --> Oracle[Oracle classifies output<br>FAIL / PASS / ERROR]
-    Oracle --> Sig[Failure signature match]
-    Sig -->|FAIL and signature matches| Engine
-    Sig -->|1-minimal found| Artifact[MinimizeResult<br>minimal_ids + certified flag]
-    Artifact --> Stochastic[Optional stochastic extra<br>statistical certification]
-```
-
-## What it does (and does not) claim
-
-**Does:**
-- Returns a context subset whose failure is **re-verified by re-execution** (not by a static heuristic).
-- Keeps every candidate **well-formed by construction** via dependency-aware closure removal.
-- With the `[stochastic]` extra, treats a stochastic policy honestly: an atom is
-  reported as necessary only when a statistical interval-separation test passes.
-- Targets the **same** failure as the original run via a normalized failure signature.
-
-**Does not:**
-- Attribute the failure to a step or describe the underlying mechanism (that is failure attribution, a different problem).
-- Promise a unique answer under a non-reproducible (flaky) `replay_fn`.
-- Work with arbitrary agent frameworks without an adapter — see the adapter table.
-
-The single-shot core reports `certified: false`. Certification is available only
-through the `[stochastic]` extra and only when interval separation passes.
-
 ## Install
 
 ```bash
@@ -102,13 +68,22 @@ tracemin diff a.json b.json                  # compare two artifacts' minimal at
 
 Oracle specs: `exit-nonzero`, `regex:PAT`, `not-regex:PAT`, `exception:TYPE`, `answer:TEXT`.
 
-## Adapters
+## Architecture
 
-| Adapter | Role | Replay |
-|---|---|---|
-| `hf` | stateless re-prompt at temperature 0 | replay-capable (the default engine) |
-| `openhands` | ingest V0 `trajectory.json` / V1 `events/` | replay via the `hf` engine |
-| `claude` | ingest Claude Code JSONL transcripts | reduction-only (attach an engine to verify) |
+```mermaid
+flowchart TD
+    Input[Failed agent run] --> Ingest[Adapter ingestion<br>openhands / claude]
+    Ingest --> Atoms[Trajectory of typed Atoms<br>message / tool_def / retrieved_file / instruction]
+    Atoms --> DAG[Dependency DAG<br>produces and requires edges]
+    DAG --> Engine[ddmin reduction engine]
+    Engine --> Closure[Closure removal<br>drop dangling atoms]
+    Closure --> Replay[replay_fn re-executes candidate]
+    Replay --> Oracle[Oracle classifies output<br>FAIL / PASS / ERROR]
+    Oracle --> Sig[Failure signature match]
+    Sig -->|FAIL and signature matches| Engine
+    Sig -->|1-minimal found| Artifact[MinimizeResult<br>minimal_ids + certified flag]
+    Artifact --> Stochastic[Optional stochastic extra<br>statistical certification]
+```
 
 ## How it works
 
@@ -124,35 +99,67 @@ Oracle specs: `exit-nonzero`, `regex:PAT`, `not-regex:PAT`, `exception:TYPE`, `a
 4. The single-shot core never certifies. The `[stochastic]` extra re-runs each
    leave-one-out *k* times and certifies an atom only on interval separation.
 
+## Adapters
+
+| Adapter | Role | Replay |
+|---|---|---|
+| `hf` | stateless re-prompt at temperature 0 | replay-capable (the default engine) |
+| `openhands` | ingest V0 `trajectory.json` / V1 `events/` | replay via the `hf` engine |
+| `claude` | ingest Claude Code JSONL transcripts | reduction-only (attach an engine to verify) |
+
+## What it does (and does not) claim
+
+**Does:**
+- Returns a context subset whose failure is **re-verified by re-execution** (not by a static heuristic).
+- Keeps every candidate **well-formed by construction** via dependency-aware closure removal.
+- With the `[stochastic]` extra, treats a stochastic policy honestly: an atom is
+  reported as necessary only when a statistical interval-separation test passes.
+- Targets the **same** failure as the original run via a normalized failure signature.
+
+**Does not:**
+- Attribute the failure to a step or describe the underlying mechanism (that is failure attribution, a different problem).
+- Promise a unique answer under a non-reproducible (flaky) `replay_fn`.
+- Work with arbitrary agent frameworks without an adapter — see the adapter table.
+
+The single-shot core reports `certified: false`. Certification is available only
+through the `[stochastic]` extra and only when interval separation passes.
+
 ## Honesty guards in the engine
 
-- **Three-valued verdicts.** Transport/infrastructure `ERROR` is never collapsed to `PASS`; persistent errors make the removal inconclusive rather than accepted.
-- **Pre-flight sanity.** The full input must reproduce the failure first; if it does not, `minimize` aborts rather than running on a non-reproducible baseline.
-- **Flakiness double-check.** With `double_check` (default on), an interesting result must reproduce twice consecutively — a cheap guard, not a statistical claim.
-- **Single-shot core is never certified.** Statistical certification lives only in the `[stochastic]` extra.
+- **Three-valued verdicts.** Transport/infrastructure `ERROR` is never collapsed to `PASS`;
+  persistent errors make the removal inconclusive rather than accepted.
+- **Pre-flight sanity.** The full input must reproduce the failure first; if it does not,
+  `minimize` aborts rather than running on a non-reproducible baseline.
+- **Flakiness double-check.** With `double_check` (default on), an interesting result must
+  reproduce twice consecutively — a cheap guard, not a statistical claim.
+- **Single-shot core is never certified.** Statistical certification lives only in the
+  `[stochastic]` extra.
 
 ## Benchmarks
 
-All figures are `[synthetic-benchmark]` results from a failure-injection suite whose
-ground truth is known by construction. Highlights (seed 0): recovery recall `1.0`
-`[synthetic-benchmark]`, wf-constrained 1-minimality verified at `1.0`
-`[synthetic-benchmark]`, and the false-reproducer rate dropping from `0.45`
-`[synthetic-benchmark]` without the failure signature to `0.0` `[synthetic-benchmark]`
-with it. See [BENCHMARK.md](BENCHMARK.md) and
-[`results/v0.1.0a1_bench.json`](results/v0.1.0a1_bench.json).
+All figures are synthetic-benchmark results from a failure-injection suite whose
+ground truth is known by construction. Results at seed 0:
+
+| Metric | Value |
+|---|---|
+| Recovery recall | `1.0` |
+| wf-constrained 1-minimality verified | `1.0` |
+| False-reproducer rate (without failure signature) | `0.45` |
+| False-reproducer rate (with failure signature) | `0.0` |
+
+See [BENCHMARK.md](BENCHMARK.md) and [`results/v0.1.0a1_bench.json`](results/v0.1.0a1_bench.json).
 
 > This is a synthetic benchmark demonstrating that the algorithm recovers a known
 > injected ground truth; it is not a prediction of real-world performance.
 
 ## Related work
 
-Delta debugging is Zeller & Hildebrandt's ddmin (TSE 2002). Recent work applies it to
-prompts (Amazon, "Delta Debugging for LLM-Integrated Systems", ICSE 2026 SEIP — no
-released tool) and compresses *code* context to *succeed* (OCD/SWEZZE, arXiv 2603.28119
-— the opposite objective). Failure *attribution* (AgenTracer, Who&When) answers a
-different question. `tracemin` whole-trajectory atoms, re-execution verification and a
-distributed OSS package occupy a niche we are not aware of being filled by an existing
-tool.
+- **ddmin** — Zeller & Hildebrandt (TSE 2002); the delta-debugging algorithm `tracemin` builds on.
+- **LLM prompt delta debugging** — Amazon, "Delta Debugging for LLM-Integrated Systems", ICSE 2026 SEIP; no released tool.
+- **Code context compression** — OCD/SWEZZE (arXiv 2603.28119); compresses *code* context to *succeed* — the opposite objective.
+- **Failure attribution** — AgenTracer, Who&When; answers a different question (why, not what).
+
+`tracemin` occupies a niche (whole-trajectory atoms, re-execution verification, distributed OSS package) we are not aware of being filled by an existing tool.
 
 ## License
 
