@@ -1,11 +1,20 @@
-"""The single secret-scrubbing chokepoint.
+"""The secret-scrubbing chokepoint for tracemin's own artifacts and output.
 
-Every piece of text that could leave the process — the embedded atoms of a
-``--script``, a bug report, CLI output, logs, the artifact's oracle spec and
-signature — must pass through :func:`scrub`. It is **default-ON** with a
-stdlib-only regex fallback, so the core is never leaky even with no extra
-installed. With the ``[sieve]`` extra it upgrades to context-sieve's
-blocklist + entropy engine; :func:`active_mode` reports which is live.
+The text tracemin *produces* — the embedded atoms of a ``--script``, a bug
+report, CLI output, logs, the artifact's oracle spec and signature — must pass
+through :func:`scrub`. It is **default-ON** with a stdlib-only regex fallback,
+so these outputs are never leaky even with no extra installed. With the
+``[sieve]`` extra it upgrades to context-sieve's blocklist + entropy engine;
+:func:`active_mode` reports which is live.
+
+Important scope note: this chokepoint covers tracemin's *own* outputs, not the
+trajectory content sent to a live replay endpoint. By design, a replay engine
+re-prompts a model with the candidate atoms verbatim (replay fidelity), so raw
+trajectory text — which may contain secrets ingested from a transcript — is sent
+to the configured endpoint unredacted unless the caller opts into scrubbing
+(e.g. ``HFReplay(..., scrub_replay=True)`` / ``reduce --scrub-replay``). Scrubbing
+replay input can change model behavior and therefore the minimization verdict, so
+it is opt-in rather than the default.
 """
 
 from __future__ import annotations

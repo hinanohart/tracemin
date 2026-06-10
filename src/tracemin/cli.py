@@ -107,7 +107,7 @@ def cmd_reduce(args: argparse.Namespace) -> int:
 
     trajectory = load_input(args.input, args.adapter)
     oracle = build_oracle(args.oracle)
-    replay = HFReplay(args.model)
+    replay = HFReplay(args.model, scrub_replay=args.scrub_replay)
     budget = ReplayBudget(max_calls=args.budget_calls, max_usd=args.budget_usd)
     result = minimize(trajectory, replay, oracle, budget=budget, cost_per_call=args.cost_per_call)
 
@@ -167,6 +167,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="USD charged per replay call (used to enforce --budget-usd)",
+    )
+    r.add_argument(
+        "--scrub-replay",
+        action="store_true",
+        help="redact secrets in the trajectory before sending it to the replay endpoint "
+        "(may change the model's output and thus the verdict)",
     )
     r.add_argument("--out", default=None, help="write the artifact JSON here")
     r.add_argument("--report", action="store_true", help="also print a bug report to stderr")
