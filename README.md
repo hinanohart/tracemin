@@ -70,20 +70,9 @@ Oracle specs: `exit-nonzero`, `regex:PAT`, `not-regex:PAT`, `exception:TYPE`, `a
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    Input[Failed agent run] --> Ingest[Adapter ingestion<br>openhands / claude]
-    Ingest --> Atoms[Trajectory of typed Atoms<br>message / tool_def / retrieved_file / instruction]
-    Atoms --> DAG[Dependency DAG<br>produces and requires edges]
-    DAG --> Engine[ddmin reduction engine]
-    Engine --> Closure[Closure removal<br>drop dangling atoms]
-    Closure --> Replay[replay_fn re-executes candidate]
-    Replay --> Oracle[Oracle classifies output<br>FAIL / PASS / ERROR]
-    Oracle --> Sig[Failure signature match]
-    Sig -->|FAIL and signature matches| Engine
-    Sig -->|1-minimal found| Artifact[MinimizeResult<br>minimal_ids + certified flag]
-    Artifact --> Stochastic[Optional stochastic extra<br>statistical certification]
-```
+<div align="center">
+  <img src="docs/architecture.png" alt="tracemin architecture" width="840">
+</div>
 
 ## How it works
 
@@ -164,3 +153,4 @@ See [BENCHMARK.md](BENCHMARK.md) and [`results/v0.1.0a1_bench.json`](results/v0.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+

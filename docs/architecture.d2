@@ -1,0 +1,48 @@
+direction: down
+explanation: |md
+  ### tracemin
+  **Re-execution-verified, dependency-aware delta-debugging for failed LLM-agent runs.**
+| {near: top-center}
+
+input: "① Failed Agent Run" {shape: oval; style: {fill: "#6366f1"; font-color: "#ffffff"; stroke: "#4338ca"; bold: true; font-size: 18}}
+
+ingest_zone: "Ingestion" {
+  style: {fill: "#fffbeb"; stroke: "#f59e0b"; font-color: "#92400e"; bold: true; font-size: 16}
+  ingest: "② Adapter ingestion\nopenhands / claude"
+  atoms: "③ Trajectory of typed Atoms\nmessage / tool_def / retrieved_file"
+  *.style.fill: "#fef3c7"; *.style.font-color: "#92400e"
+}
+
+dag: "④ Dependency DAG\nproduces + requires edges" {style: {fill: "#0ea5e9"; font-color: "#ffffff"; stroke: "#0369a1"; bold: true; font-size: 16}}
+
+reduction_zone: "ddmin Reduction Loop" {
+  style: {fill: "#f0fdf4"; stroke: "#10b981"; font-color: "#065f46"; bold: true; font-size: 16}
+  engine: "⑤ ddmin reduction engine"
+  closure: "Closure removal\ndrop dangling atoms"
+  replay: "⑥ replay_fn\nre-executes candidate"
+  oracle: "⑦ Oracle classifies\nFAIL / PASS / ERROR"
+  sig: "Failure signature match"
+  *.style.fill: "#dcfce7"; *.style.font-color: "#065f46"
+}
+
+artifact: "⑧ MinimizeResult\nminimal_ids + certified flag" {shape: cylinder; style: {fill: "#fdf2f8"; stroke: "#ec4899"; font-color: "#9d174e"; bold: true; font-size: 16}}
+stochastic: "Optional stochastic extra\nstatistical certification" {style: {fill: "#fdf2f8"; stroke: "#ec4899"; font-color: "#9d174e"; bold: true}}
+
+input -> ingest_zone.ingest: "① ingest"
+ingest_zone.ingest -> ingest_zone.atoms: "② parse"
+ingest_zone.atoms -> dag: "③ build DAG"
+dag -> reduction_zone.engine: "④ reduce"
+reduction_zone.engine -> reduction_zone.closure: "⑤ prune"
+reduction_zone.closure -> reduction_zone.replay: "⑥ replay"
+reduction_zone.replay -> reduction_zone.oracle: "⑦ classify"
+reduction_zone.oracle -> reduction_zone.sig: "match"
+reduction_zone.sig -> reduction_zone.engine: "FAIL: loop back"
+reduction_zone.sig -> artifact: "⑧ 1-minimal found"
+artifact -> stochastic: "certify"
+
+legend: "Legend" {
+  near: bottom-center
+  style: {fill: "#f8fafc"; stroke: "#cbd5e1"; font-size: 13}
+  e: "● entry"; c: "● core"; p: "● reduction"; b: "● ingestion"; d: "● output"
+  e.style.font-color: "#4338ca"; c.style.font-color: "#0369a1"; p.style.font-color: "#10b981"; b.style.font-color: "#f59e0b"; d.style.font-color: "#ec4899"
+}
