@@ -12,6 +12,23 @@ triggers the failure — not an explanation of the underlying cause.
 
 > **Status:** pre-alpha (`0.1.0a1`). API and outputs may change.
 
+## Architecture
+
+```mermaid
+flowchart TD
+    Input[Failed agent run] --> Ingest[Adapter ingestion\nopenhands / claude / hf]
+    Ingest --> Atoms[Trajectory of typed Atoms\nmessage / tool_def / retrieved_file / instruction]
+    Atoms --> DAG[Dependency DAG\nproduces and requires edges]
+    DAG --> Engine[ddmin reduction engine]
+    Engine --> Closure[Closure removal\ndrop dangling atoms]
+    Closure --> Replay[replay_fn re-executes candidate]
+    Replay --> Oracle[Oracle classifies output\nFAIL / PASS / ERROR]
+    Oracle --> Sig[Failure signature match]
+    Sig -->|FAIL and signature matches| Engine
+    Sig -->|1-minimal found| Artifact[MinimizeResult\nminimal_ids + certified flag]
+    Artifact --> Stochastic[Optional stochastic extra\nstatistical certification]
+```
+
 ## What it does (and does not) claim
 
 **Does:**
@@ -106,6 +123,13 @@ Oracle specs: `exit-nonzero`, `regex:PAT`, `not-regex:PAT`, `exception:TYPE`, `a
    third verdict (`ERROR`) that is excluded from both accept and reject.
 4. The single-shot core never certifies. The `[stochastic]` extra re-runs each
    leave-one-out *k* times and certifies an atom only on interval separation.
+
+## Honesty guards in the engine
+
+- **Three-valued verdicts.** Transport/infrastructure `ERROR` is never collapsed to `PASS`; persistent errors make the removal inconclusive rather than accepted.
+- **Pre-flight sanity.** The full input must reproduce the failure first; if it does not, `minimize` aborts rather than running on a non-reproducible baseline.
+- **Flakiness double-check.** With `double_check` (default on), an interesting result must reproduce twice consecutively — a cheap guard, not a statistical claim.
+- **Single-shot core is never certified.** Statistical certification lives only in the `[stochastic]` extra.
 
 ## Benchmarks
 
