@@ -16,7 +16,7 @@ triggers the failure — not an explanation of the underlying cause.
 
 ```mermaid
 flowchart TD
-    Input[Failed agent run] --> Ingest[Adapter ingestion<br>openhands / claude / hf]
+    Input[Failed agent run] --> Ingest[Adapter ingestion<br>openhands / claude]
     Ingest --> Atoms[Trajectory of typed Atoms<br>message / tool_def / retrieved_file / instruction]
     Atoms --> DAG[Dependency DAG<br>produces and requires edges]
     DAG --> Engine[ddmin reduction engine]
