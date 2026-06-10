@@ -123,8 +123,9 @@ def test_reduce_cost_per_call_makes_usd_budget_bite(tmp_path, monkeypatch, capsy
     class _FakeReplay:
         replay_capable = True
 
-        def __init__(self, model: str) -> None:
+        def __init__(self, model: str, *, scrub_replay: bool = False) -> None:
             self.model = model
+            self.scrub_replay = scrub_replay
 
         def __call__(self, subset):
             return RawOutput(exit_code=1, exception_type="KeyError")

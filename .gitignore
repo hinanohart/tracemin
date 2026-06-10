@@ -31,3 +31,4 @@ tests/fixtures/*.secret.jsonl
 
 # OS
 .DS_Store
+.hypothesis/

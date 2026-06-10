@@ -10,6 +10,15 @@ The client is injectable so the request-builder and response-parser are unit-tes
 against recorded responses with no network (live calls are opt-in via
 ``@pytest.mark.live``). ``HF_TOKEN`` is read from the environment only — never baked
 into code or artifacts.
+
+Secret-handling caveat: replay re-prompts the model with the candidate atoms
+*verbatim*, so the raw trajectory content — which may carry secrets ingested from
+a transcript (API keys in a tool_result, etc.) — is sent to the live HF endpoint
+**unredacted by default**. This is inherent to replay fidelity. Pass
+``scrub_replay=True`` (CLI: ``reduce --scrub-replay``) to route the rendered
+messages and tool schemas through :func:`tracemin.scrub.scrub` before they leave
+the process; note that redacting the input can change the model's output and thus
+the minimization verdict, which is why it is opt-in.
 """
 
 from __future__ import annotations
@@ -21,7 +30,7 @@ from typing import Any
 from tracemin.adapters._render import render_chat
 from tracemin.atoms import Atom
 from tracemin.replay import RawOutput, ReplayError
-from tracemin.scrub import scrub
+from tracemin.scrub import scrub, scrub_obj
 
 replay_capable = True
 
@@ -56,10 +65,12 @@ class HFReplay:
         client: Any | None = None,
         temperature: float = 0.0,
         seed: int = 0,
+        scrub_replay: bool = False,
     ) -> None:
         self.model = model
         self.temperature = temperature
         self.seed = seed
+        self.scrub_replay = scrub_replay
         self._token = token
         self._client = client
 
@@ -75,6 +86,11 @@ class HFReplay:
 
     def __call__(self, subset: Sequence[Atom]) -> RawOutput:
         messages, tools = render_chat(subset)
+        if self.scrub_replay:
+            # Opt-in: redact secrets in the rendered payload before it leaves the
+            # process. This can alter the model's response (and thus the verdict).
+            messages = scrub_obj(messages)  # type: ignore[assignment]
+            tools = scrub_obj(tools)  # type: ignore[assignment]
         try:
             resp = self._get_client().chat_completion(
                 messages=messages,

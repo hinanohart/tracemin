@@ -41,6 +41,28 @@ def test_hf_replay_builds_request_and_parses():
     assert captured["messages"][1]["role"] == "user"
 
 
+def test_hf_replay_sends_raw_by_default_and_scrubs_when_opted_in():
+    captured = {}
+
+    class FakeClient:
+        def chat_completion(self, **kw):
+            captured.update(kw)
+            return _resp("ok")
+
+    secret = "hf_" + "A" * 32
+    atoms = [Atom.make(AtomKind.MESSAGE, {"role": "user", "content": f"key={secret}"}, order=0)]
+
+    # Default replay fidelity: the raw secret reaches the endpoint unredacted.
+    HFReplay("m", client=FakeClient())(atoms)
+    assert secret in captured["messages"][0]["content"]
+
+    # Opt-in scrubbing redacts it before it leaves the process.
+    captured.clear()
+    HFReplay("m", client=FakeClient(), scrub_replay=True)(atoms)
+    assert secret not in captured["messages"][0]["content"]
+    assert "REDACTED" in captured["messages"][0]["content"]
+
+
 def test_hf_replay_wraps_infra_error():
     class BoomClient:
         def chat_completion(self, **kw):
