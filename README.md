@@ -16,17 +16,17 @@ triggers the failure — not an explanation of the underlying cause.
 
 ```mermaid
 flowchart TD
-    Input[Failed agent run] --> Ingest[Adapter ingestion\nopenhands / claude / hf]
-    Ingest --> Atoms[Trajectory of typed Atoms\nmessage / tool_def / retrieved_file / instruction]
-    Atoms --> DAG[Dependency DAG\nproduces and requires edges]
+    Input[Failed agent run] --> Ingest[Adapter ingestion<br>openhands / claude / hf]
+    Ingest --> Atoms[Trajectory of typed Atoms<br>message / tool_def / retrieved_file / instruction]
+    Atoms --> DAG[Dependency DAG<br>produces and requires edges]
     DAG --> Engine[ddmin reduction engine]
-    Engine --> Closure[Closure removal\ndrop dangling atoms]
+    Engine --> Closure[Closure removal<br>drop dangling atoms]
     Closure --> Replay[replay_fn re-executes candidate]
-    Replay --> Oracle[Oracle classifies output\nFAIL / PASS / ERROR]
+    Replay --> Oracle[Oracle classifies output<br>FAIL / PASS / ERROR]
     Oracle --> Sig[Failure signature match]
     Sig -->|FAIL and signature matches| Engine
-    Sig -->|1-minimal found| Artifact[MinimizeResult\nminimal_ids + certified flag]
-    Artifact --> Stochastic[Optional stochastic extra\nstatistical certification]
+    Sig -->|1-minimal found| Artifact[MinimizeResult<br>minimal_ids + certified flag]
+    Artifact --> Stochastic[Optional stochastic extra<br>statistical certification]
 ```
 
 ## What it does (and does not) claim
